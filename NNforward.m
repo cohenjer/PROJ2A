@@ -1,6 +1,6 @@
-function [S]= NNforward(p,W,W2,b)
+function [S]= NNforward(p,W,W2)
 
-N = W*p+b;
+N = W*p;
 k = length(N);
 s = zeros(k,1);
 

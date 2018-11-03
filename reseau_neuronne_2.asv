@@ -1,6 +1,6 @@
 %% on initialise les variables
 
-xi = 10*rand(1,1000);
+xi = rand(1,1000);
 Xt = zeros(2,500);
 X = xi(1,1:2:end);
 X = [X;ones(1,500)];
@@ -14,7 +14,7 @@ W = ones(500,2);
 W2 = ones(1,500);
 
 [M,N] = size(W);
-mu = 1e-2;
+mu = 1e-3;
 
 %% on calcule la sortie scalaire
 e=1;
@@ -27,12 +27,11 @@ while (e>1e-3)
     a1 = K(501:end-1);
     n1 = K(1:1000);
 
-    e = ((Xt(i)^2)-a2)^2;
+    e = ((a2-Xt(1,k)^2))^2;
     for k=1:M
-        W2(k) = W2(k) + 2*mu*a1(k)*sqrt(e);
+        W2(k) = W2(k) - 2*a1(k)*(a2-Xt(k)^2)*mu;
         for j=1:N
-            E = -2*exp(-n1(k))/(1+exp(-n1(k)))^2*sqrt(e)*Xt(j,i);
-            W(k,j) = W(k,j) - mu*E;
+            W(k,j) = W(k,j) - mu*2*(a2-Xt(k)^2)*a2*(1-a2)*W2(k)*a1(k)*(1-a1(k))*Xt(j,k); 
         end
     end
     i = mod(i,length(xi)/2)+1;
@@ -51,6 +50,3 @@ y=sort(y);
 plot(X,yi)
 hold on 
 plot(xi,y)
-
-
-
