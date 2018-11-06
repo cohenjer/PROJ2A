@@ -1,4 +1,4 @@
-function [S]= NNforward(p,W,W2)
+function [N,s,y]= NNforward(p,W,W2)
 
 N = W*p;
 k = length(N);
@@ -8,9 +8,11 @@ for i=1:k
     s(i) = sigmoid(N(i));
 end
 
-y = W2*s;
+% Adding an offset on the second layer as well
+sb = [s;1];
 
-S=[N;s;y];
+y = W2*sb;
+
 
 end
 
