@@ -9,9 +9,9 @@ for i=1:k
 end
 
 % Adding an offset on the second layer as well
-s = [s;1];
+sb = [s;1];
 
-y = W2*s;
+y = W2*sb;
 
 
 end

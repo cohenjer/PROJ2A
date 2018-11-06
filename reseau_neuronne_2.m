@@ -31,7 +31,7 @@ yt = yi(2:2:end);
 % Ici les dimensions de W relèvent du choix de l'utilisateur. Pourquoi
 % mettre 500 ? Ici avec 1 au lieu de 500, ca marche aussi...
 % J'ai également mis des randn au lieu de ones.
-dims = 100;
+dims = 10;
 W = randn(dims,2);
 W2 = randn(1,dims+1);
 
@@ -90,20 +90,23 @@ while (err_mean>1e-5)
     %    end
     %end
     W2_old = W2;
-    W2 = W2 - mu*err*a1'; 
+    W2 = W2 - mu*err*[a1;1]'; 
     
-    %for k=1:M
-        for j=1:N
-            %W(k,j) = W(k,j) - mu*(a2-Xt(k)^2)*a2*(1-a2)*W2(k)*a1(k)*(1-a1(k))*Xt(j,k); 
-            % Mon calcul
-            %W(k,j) = W(k,j) - mu*Xt(j,i)*W2*(a1.*(1-a1))*err;
-            % Version vectorisée
-            W(:,j) = W(:,j) - mu*Xt(j,i)*(W2_old*(a1.*(1-a1)))*err*ones(M,1);
-            % Version Hiérarchique
-            %W(:,j) = W(:,j) - mu*Xt(j,i)*(W2*(a1.*(1-a1)))*err*ones(M,1);
-        end
-    %end
-    
+   
+    % Ta version, incorrecte? (Xt(k)? a2(1-a2)?)    
+    %W(k,j) = W(k,j) - mu*(a2-Xt(k)^2)*a2*(1-a2)*W2(k)*a1(k)*(1-a1(k))*Xt(j,k); 
+            
+            % Version correcte loop
+    %    for j=1:N
+    %        for k=1:M
+    %        W(k,j) = W(k,j) - mu*Xt(j,i)*W2_old(k)*(a1(k)*(1-a1(k)))*err;        
+    %        end
+    %    end
+        
+   % Version vectorisee
+    %W = W - mu*(W2_old(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
+    % Version hierarchique
+    W = W - mu*(W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
     
     end % Fin for
     err_mean = err_mean / size(Xt,2);
