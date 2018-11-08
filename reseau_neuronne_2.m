@@ -4,13 +4,21 @@ clear variables
 close all
 clc
 
+%liste des omegas
+N = 5;
+W_o = linspace(1,10,N);
+err_plot = zeros(1,N);
+
+%pour chaque omega on va calculer l'erreur
+for j=1:N
+    
 % 05/11/2018
 % j'ai un peu réarrangé le code pour que ce soit plus simple, en supprimant
 % la boucle sur Xt. J'ai aussi changé xi pour qu'il soit directement une
 % grille sur [0,1]
 
 % Nombre de points sur la grille
-Nb = 6;
+Nb = 20;
 
 %xi = rand(1,Nb);
 xi = linspace(0,1,Nb);
@@ -20,9 +28,9 @@ Xt = xi;
 Xt = [Xt;ones(1,Nb)];
 
 % Fonction carrée comme fonction que l'on veut interpoler
-yi = xi.^2+cos(10*xi);
-yt = yi;
 
+yi = xi.^2 + cos(W_o(j)*xi);
+yt = yi;
 % Ici les dimensions de W relèvent du choix de l'utilisateur. Pourquoi
 % mettre 500 ? Ici avec 1 au lieu de 500, ca marche aussi...
 % J'ai également mis des randn au lieu de ones.
@@ -61,8 +69,13 @@ mu = 0.01;
 % ce que tu avais avant.
 
 err_mean = 1;
+N2 = 2 ;
+number = 0 ;
+e = 0 ;
 
-while (err_mean>1e-5)
+%on fait la moyenne sur plusieurs essais
+for u=1:N2
+    while (err_mean>1e-4) && (number<1000)
     
     fprintf('err_mean: %d\n',err_mean)
     err_mean = 0;
@@ -74,7 +87,6 @@ while (err_mean>1e-5)
     [n1,a1,a2]=NNforward(Xt(:,i),W,W2);
     err = a2-yt(i);
     err_mean = err_mean + err^2;
-
     
     W2_old = W2;
     W2 = W2 - mu*err*[a1;1]'; 
@@ -92,44 +104,68 @@ while (err_mean>1e-5)
     W = W - mu*(W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
     
     end % Fin for
+    
     err_mean = err_mean / size(Xt,2);
     
-end % Fin while
+    if abs(err_mean-e) < 0.05*abs(err_mean-e)
+        number =+ 1
+    end
+    
+    e = err_mean ;
+    
+    end % Fin while
+    
+
+
+
 
 %% Post-processing
 
-% Sorties yt_est sur les données train
-for w=1:length(Xt)
-    [~,~,out] =NNforward(Xt(:,w),W,W2);
-    yt_est(1,w)= out;
-end
-
-
-% Tracés
-    % 1/ Performances sur données train (normalement très bon)
-    figure
-    plot(Xt(1,:),yt,'+')
-    hold on
-    plot(Xt(1,:),yt_est,'*')
-    legend('True','NN')
-    title('Train')
+% % Sorties yt_est sur les données train
+% for w=1:length(Xt)
+%     [~,~,out] =NNforward(Xt(:,w),W,W2);
+%     yt_est(1,w)= out;
+% end
+% 
+% 
+% % Tracés
+%     % 1/ Performances sur données train (normalement très bon)
+%     figure
+%     plot(Xt(1,:),yt,'+')
+%     hold on
+%     plot(Xt(1,:),yt_est,'*')
+%     legend('True','NN')
+%     title('Train')
         
     
     % 3/ Sur une grille fine (test)
-    grille = linspace(0,1,1000);
-    fun_real = grille.^2 + cos(10*grille);
+    N_grille = 1000;
+    grille = linspace(0,1,N_grille);
+    fun_real = grille.^2 + cos(W_o(j)*grille);       
     for l=1:1000
-       [~,~, toto] = NNforward([grille(l);1],W,W2);
-       fun_est(l) = toto;
+       [~,~, y] = NNforward([grille(l);1],W,W2);
+       fun_est(l) = y;
+       err_2 = (fun_est(l)-fun_real(l))^2;
+       err_mean_2 =+ err_2;
     end
-    figure    
-    plot(grille,fun_real,'--r')
-    hold on
-    plot(grille,fun_est,'k')
-    legend('True','NN')
-    title('Comparaison grille fine')
-    
-    
+    err_mean_2 = err_mean_2/N_grille;
+    err_plot_mean =+ err_mean_2;
+end
+
+%on stocke l'erreur pour un omega donn�
+err_plot_mean = err_plot_mean/N2;
+err_plot(j) = err_plot_mean;
+
+end
+    %on affiche la courbe err(omega)
+    plot(W_o,err_plot);
+%     figure    
+%     plot(grille,fun_real,'--r')
+%     hold on
+%     plot(grille,fun_est,'k')
+%     legend('True','NN')
+%     title('Comparaison grille fine') 
+     
     % TODO: Ajouter une couche pour tester l'expressivité
     % TODO: Regarder différentes fonctions (pas que x^2)
     % TODO: regarder l'influence de la taille interne des W
