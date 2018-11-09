@@ -5,8 +5,8 @@ close all
 clc
 
 %liste des omegas
-Nomega = 20;
-W_o = linspace(0,11,Nomega);
+Nomega = 2;
+W_o = linspace(3,4,Nomega);
 err_omega = zeros(1,Nomega);
 
 %pour chaque omega on va calculer l'erreur
@@ -36,26 +36,30 @@ yt = yi;
 err_mean = 1;
 N2 = 5 ;
 e = 0 ;
-% Pas du gradient
-mu = 0.01;
+
 % Nombre max d'iteration
-itermax = 1000;
+itermax = 100000;
 
 
 %on fait la moyenne sur plusieurs essais
 for u=1:N2
     
 % initialisation    
-dims = 10;
+dims = 200;
 W = randn(dims,2);
 W2 = randn(1,dims+1);
+%W2 = randn(1,dims);
+% Pas du gradient
+mu = 0.0001;
+
 number = 0 ;
 [M,N] = size(W);
 err_mean = 1;
 
-    while (err_mean>10^(-4)) && (number<itermax)
-    
-        if mod(number,10)==0
+    while (err_mean>10^(-3)) && (number<itermax)
+
+        %mu = 0.1*rand(1); %test chelou
+        if mod(number,100)==0
         fprintf('iter: %d, err_mean: %g\n',number,err_mean)
         end
         err_mean = 0;
@@ -72,15 +76,16 @@ err_mean = 1;
             
             % Gradient steps
             W2 = W2 - mu*err*[a1;1]';
+            %W2 = W2 - mu*err*a1';
             
             % hierarchical method
             % re-computation of error since W2 has changed
-            %[n1,a1,a2]=NNforward(Xt(:,i),W,W2);
-            %err = a2-yt(i);
-            %W = W - mu*(W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
+            [n1,a1,a2]=NNforward(Xt(:,i),W,W2);
+            err = a2-yt(i);
+            W = W - mu*(W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
             
             % Gradient method
-            W = W - mu*(W2_old(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
+            %W = W - mu*(W2_old(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
             
         end % Fin for
         
@@ -92,7 +97,6 @@ err_mean = 1;
     
     end % Fin while
     
-
 
 
 
@@ -114,7 +118,11 @@ err_mean = 1;
 %     legend('True','NN')
 %     title('Train')
         
-    
+
+    % Training error
+    err_train(j,u) = err_mean;
+
+
     % 3/ Sur une grille fine (test)
     N_grille = 1000;
     grille = linspace(0,1,N_grille);
@@ -129,18 +137,24 @@ err_mean = 1;
 end
 
 %on stocke l'erreur pour un omega donn�
+std_omega(j) = std(err_plot);
 err_omega(j) = mean(err_plot);
 
 end
+
+    %on verifie que la courbe err train est relativement plate (on doit
+    %pouvoir avoir toujours proche de 0 erreur de reconstruction)
+    figure
+    plot(W_o,mean(err_train,2))
+    
     %on affiche la courbe err(omega)
+    figure
     plot(W_o,err_omega);
-%     figure    
-%     plot(grille,fun_real,'--r')
-%     hold on
-%     plot(grille,fun_est,'k')
-%     legend('True','NN')
-%     title('Comparaison grille fine') 
-     
-    % TODO: Ajouter une couche pour tester l'expressivité
+    hold on
+    plot(W_o,err_omega + std_omega);
+    plot(W_o,err_omega - std_omega);
+    
+
+    
     % TODO: Regarder différentes fonctions (pas que x^2)
     % TODO: regarder l'influence de la taille interne des W
