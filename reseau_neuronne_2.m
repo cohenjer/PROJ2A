@@ -5,6 +5,7 @@ close all
 clc
 
 %liste des omegas
+<<<<<<< HEAD
 Nomega = 2;
 W_o = linspace(3,4,Nomega);
 err_omega = zeros(1,Nomega);
@@ -12,7 +13,6 @@ err_omega = zeros(1,Nomega);
 %pour chaque omega on va calculer l'erreur
 for j=1:Nomega
     
-
 % Nombre de points sur la grille
 Nb = 20;
 
@@ -55,6 +55,9 @@ mu = 0.0001;
 number = 0 ;
 [M,N] = size(W);
 err_mean = 1;
+N2 = 2 ;
+number = 0 ;
+e = 0 ;
 
     while (err_mean>10^(-3)) && (number<itermax)
 
@@ -95,9 +98,9 @@ err_mean = 1;
         number = number +1; % increment iteration
         %end
     
+<<<<<<< HEAD
     end % Fin while
     
-
 
 
 %% Post-processing
@@ -156,5 +159,4 @@ end
     
 
     
-    % TODO: Regarder différentes fonctions (pas que x^2)
     % TODO: regarder l'influence de la taille interne des W
