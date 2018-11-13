@@ -5,9 +5,8 @@ close all
 clc
 
 %liste des omegas
-<<<<<<< HEAD
-Nomega = 2;
-W_o = linspace(3,4,Nomega);
+Nomega = 5;
+W_o = linspace(0,1,Nomega);
 err_omega = zeros(1,Nomega);
 
 %pour chaque omega on va calculer l'erreur
@@ -24,7 +23,7 @@ Xt = xi;
 Xt = [Xt;ones(1,Nb)];
 
 % Fonction que l'on veut interpoler
-%yi = xi.^2 + cos(2*pi*W_o(j)*xi);
+%yi = xi.^2 + cos(2*pi*W_o(j)*xi);.1106
 yi = sin(2*pi*W_o(j)*xi);
 yt = yi;
 
@@ -38,7 +37,7 @@ N2 = 5 ;
 e = 0 ;
 
 % Nombre max d'iteration
-itermax = 100000;
+itermax = 10000;
 
 
 %on fait la moyenne sur plusieurs essais
@@ -50,7 +49,7 @@ W = randn(dims,2);
 W2 = randn(1,dims+1);
 %W2 = randn(1,dims);
 % Pas du gradient
-mu = 0.0001;
+mu = 0.001;
 
 number = 0 ;
 [M,N] = size(W);
@@ -59,7 +58,7 @@ N2 = 2 ;
 number = 0 ;
 e = 0 ;
 
-    while (err_mean>10^(-3)) && (number<itermax)
+    while (err_mean>10^(-4)) && (number<itermax)
 
         %mu = 0.1*rand(1); %test chelou
         if mod(number,100)==0
@@ -75,20 +74,15 @@ e = 0 ;
             [~,a1,a2]=NNforward(Xt(:,i),W,W2);
             err = a2-yt(i);
             err_mean = err_mean + err^2;
-            W2_old = W2;
+            
+            % Gradient computations
+            g2 = err*[a1;1]';
+            g  = (W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
             
             % Gradient steps
-            W2 = W2 - mu*err*[a1;1]';
-            %W2 = W2 - mu*err*a1';
+            W = W - mu*g;
+            W2 = W2 - mu*g2;
             
-            % hierarchical method
-            % re-computation of error since W2 has changed
-            [n1,a1,a2]=NNforward(Xt(:,i),W,W2);
-            err = a2-yt(i);
-            W = W - mu*(W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
-            
-            % Gradient method
-            %W = W - mu*(W2_old(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
             
         end % Fin for
         
@@ -98,7 +92,6 @@ e = 0 ;
         number = number +1; % increment iteration
         %end
     
-<<<<<<< HEAD
     end % Fin while
     
 
