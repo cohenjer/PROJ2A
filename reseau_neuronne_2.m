@@ -5,18 +5,13 @@ close all
 clc
 
 %liste des omegas
-N = 5;
-W_o = linspace(1,10,N);
-err_plot = zeros(1,N);
+Nomega = 5;
+W_o = linspace(0,1,Nomega);
+err_omega = zeros(1,Nomega);
 
 %pour chaque omega on va calculer l'erreur
-for j=1:N
+for j=1:Nomega
     
-% 05/11/2018
-% j'ai un peu réarrangé le code pour que ce soit plus simple, en supprimant
-% la boucle sur Xt. J'ai aussi changé xi pour qu'il soit directement une
-% grille sur [0,1]
-
 % Nombre de points sur la grille
 Nb = 20;
 
@@ -27,96 +22,78 @@ xi = linspace(0,1,Nb);
 Xt = xi;
 Xt = [Xt;ones(1,Nb)];
 
-% Fonction carrée comme fonction que l'on veut interpoler
-
-yi = xi.^2 + cos(W_o(j)*xi);
+% Fonction que l'on veut interpoler
+%yi = xi.^2 + cos(2*pi*W_o(j)*xi);.1106
+yi = sin(2*pi*W_o(j)*xi);
 yt = yi;
-% Ici les dimensions de W relèvent du choix de l'utilisateur. Pourquoi
-% mettre 500 ? Ici avec 1 au lieu de 500, ca marche aussi...
-% J'ai également mis des randn au lieu de ones.
-dims = 100;
-W = randn(dims,2);
-W2 = randn(1,dims+1);
 
-[M,N] = size(W);
-
-% Pas du gradient
-mu = 0.01;
+%Rq: theoreme de Shannon respecte si omega<10.
 
 %% on calcule la sortie scalaire
 
 
-% Mes corrections:
-%   Corrections Majeures
-%---------------------------------
-% - Erreur aussi dans la syntaxe pour W (calculs probablement OK mais
-% implémentation bizare). J'ai changé en refaisant comme toi les calculs à
-% la main.
-% - J'ai changé l'ordre des boucles. Maintenant on passe sur toutes les
-% données d'entrainement, puis on regarde si la moyenne des erreurs au
-% carré est faible pour savoir si on recommence. 
-% - Ajout d'un b2 directement dans W2 comme je t'avais demandé.
-% - Choix aléatoire de l'ordre de parcours des données d'entrainement
-%
-%   Corrections Mineures
-%---------------------------------
-% - Changement de la sortie de NNforward pour avoir les sorties séparées
-% (pas dans un gros vecteur). 
-% - Précalcul des Xt² dans un yt pour plus de lisibilité
-% - J'ai enlevé les facteurs 2 partout. Il suffit de multiplier mu par 2
-% pour retrouver le même comportement, donc c'est inutile de les mettre.
-% - J'ai réécris la mise à jour de W2 en une ligne, mais c'est pareil que
-% ce que tu avais avant.
+err_mean = 1;
+N2 = 5 ;
+e = 0 ;
 
+% Nombre max d'iteration
+itermax = 10000;
+
+
+%on fait la moyenne sur plusieurs essais
+for u=1:N2
+    
+% initialisation    
+dims = 200;
+W = randn(dims,2);
+W2 = randn(1,dims+1);
+%W2 = randn(1,dims);
+% Pas du gradient
+mu = 0.001;
+
+number = 0 ;
+[M,N] = size(W);
 err_mean = 1;
 N2 = 2 ;
 number = 0 ;
 e = 0 ;
 
-%on fait la moyenne sur plusieurs essais
-for u=1:N2
-    while (err_mean>1e-4) && (number<1000)
-    
-    fprintf('err_mean: %d\n',err_mean)
-    err_mean = 0;
-    
-    index_list = randperm(length(xi));
-    
-    for i=index_list
-    
-    [n1,a1,a2]=NNforward(Xt(:,i),W,W2);
-    err = a2-yt(i);
-    err_mean = err_mean + err^2;
-    
-    W2_old = W2;
-    W2 = W2 - mu*err*[a1;1]'; 
-    
-            % Version correcte loop
-    %    for j=1:N
-    %        for k=1:M
-    %        W(k,j) = W(k,j) - mu*Xt(j,i)*W2_old(k)*(a1(k)*(1-a1(k)))*err;        
-    %        end
-    %    end
+    while (err_mean>10^(-4)) && (number<itermax)
+
+        %mu = 0.1*rand(1); %test chelou
+        if mod(number,100)==0
+        fprintf('iter: %d, err_mean: %g\n',number,err_mean)
+        end
+        err_mean = 0;
         
-   % Version vectorisee
-    %W = W - mu*(W2_old(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
-    % Version hierarchique
-    W = W - mu*(W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
-    
-    end % Fin for
-    
-    err_mean = err_mean / size(Xt,2);
-    
-    if abs(err_mean-e) < 0.05*abs(err_mean-e)
-        number =+ 1
-    end
-    
-    e = err_mean ;
+        index_list = randperm(length(xi));
+        
+        for i=index_list
+            
+            % Precomputations
+            [~,a1,a2]=NNforward(Xt(:,i),W,W2);
+            err = a2-yt(i);
+            err_mean = err_mean + err^2;
+            
+            % Gradient computations
+            g2 = err*[a1;1]';
+            g  = (W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
+            
+            % Gradient steps
+            W = W - mu*g;
+            W2 = W2 - mu*g2;
+            
+            
+        end % Fin for
+        
+        err_mean = err_mean / size(Xt,2);
+        
+        %if abs(err_mean-e) < 0.05*abs(err_mean-e)
+        number = number +1; % increment iteration
+        %end
     
     end % Fin while
     
-
-
 
 
 %% Post-processing
@@ -137,35 +114,42 @@ for u=1:N2
 %     legend('True','NN')
 %     title('Train')
         
-    
+
+    % Training error
+    err_train(j,u) = err_mean;
+
+
     % 3/ Sur une grille fine (test)
     N_grille = 1000;
     grille = linspace(0,1,N_grille);
-    fun_real = grille.^2 + cos(W_o(j)*grille);       
+    %fun_real = grille.^2 + cos(2*pi*W_o(j)*grille);       
+    fun_real = sin(2*pi*W_o(j)*grille);       
     for l=1:1000
-       [~,~, y] = NNforward([grille(l);1],W,W2);
-       fun_est(l) = y;
-       err_2 = (fun_est(l)-fun_real(l))^2;
-       err_mean_2 =+ err_2;
+       [~,~, outnn] = NNforward([grille(l);1],W,W2);
+       fun_est(l) = outnn;
+       err_2(l) = (fun_est(l)-fun_real(l))^2;
     end
-    err_mean_2 = err_mean_2/N_grille;
-    err_plot_mean =+ err_mean_2;
+    err_plot(u) = mean(err_2);
 end
 
-%on stocke l'erreur pour un omega donn�
-err_plot_mean = err_plot_mean/N2;
-err_plot(j) = err_plot_mean;
+%on stocke l'erreur pour un omega donn�
+std_omega(j) = std(err_plot);
+err_omega(j) = mean(err_plot);
 
 end
+
+    %on verifie que la courbe err train est relativement plate (on doit
+    %pouvoir avoir toujours proche de 0 erreur de reconstruction)
+    figure
+    plot(W_o,mean(err_train,2))
+    
     %on affiche la courbe err(omega)
-    plot(W_o,err_plot);
-%     figure    
-%     plot(grille,fun_real,'--r')
-%     hold on
-%     plot(grille,fun_est,'k')
-%     legend('True','NN')
-%     title('Comparaison grille fine') 
-     
-    % TODO: Ajouter une couche pour tester l'expressivité
-    % TODO: Regarder différentes fonctions (pas que x^2)
+    figure
+    plot(W_o,err_omega);
+    hold on
+    plot(W_o,err_omega + std_omega);
+    plot(W_o,err_omega - std_omega);
+    
+
+    
     % TODO: regarder l'influence de la taille interne des W
