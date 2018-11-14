@@ -6,14 +6,14 @@ clc
 
 %liste des omegas
 Nomega = 5;
-W_o = linspace(0,1,Nomega);
+W_o = linspace(0,0.5,Nomega);
 err_omega = zeros(1,Nomega);
 
 %pour chaque omega on va calculer l'erreur
 for j=1:Nomega
     
 % Nombre de points sur la grille
-Nb = 20;
+Nb = 10;
 
 %xi = rand(1,Nb);
 xi = linspace(0,1,Nb);
@@ -27,7 +27,7 @@ Xt = [Xt;ones(1,Nb)];
 yi = sin(2*pi*W_o(j)*xi);
 yt = yi;
 
-%Rq: theoreme de Shannon respecte si omega<10.
+%Rq: theoreme de Shannon respecte si omega<Nb/2 et si temps infini.
 
 %% on calcule la sortie scalaire
 
@@ -37,56 +37,100 @@ N2 = 5 ;
 e = 0 ;
 
 % Nombre max d'iteration
-itermax = 10000;
+itermax = 100000;
 
 
 %on fait la moyenne sur plusieurs essais
 for u=1:N2
     
 % initialisation    
-dims = 200;
+dims = 10;
 W = randn(dims,2);
 W2 = randn(1,dims+1);
-%W2 = randn(1,dims);
 % Pas du gradient
-mu = 0.001;
+mu = 0.00001;
 
 number = 0 ;
 [M,N] = size(W);
 err_mean = 1;
-N2 = 2 ;
+N2 = 2;
 number = 0 ;
 e = 0 ;
+mom = 0; mom2 = 0;
+alpha = 0.5;
+Y1 = W;
+Y2 = W2;
 
-    while (err_mean>10^(-4)) && (number<itermax)
+    while (err_mean>5*10^(-5)) && (number<itermax)
 
-        %mu = 0.1*rand(1); %test chelou
+        
         if mod(number,100)==0
         fprintf('iter: %d, err_mean: %g\n',number,err_mean)
         end
         err_mean = 0;
         
         index_list = randperm(length(xi));
+%         
+%         for i=index_list
+%             
+%             % Precomputations
+%             [~,a1,a2]=NNforward(Xt(:,i),W,W2);
+%             err = a2-yt(i);
+%             err_mean = err_mean + err^2;
+%             
+%             % Gradient computations
+%             g2 = err*[a1;1]';
+%             g  = (W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
+%             
+%             % Storing olds
+%             Wold = W;
+%             W2old = W2;
+%             
+%             % Gradient steps
+%             W = W - mu*g + alpha*mom;
+%             W2 = W2 - mu*g2 + alpha*mom2;
+%             
+%             % Momentum update
+%             mom  =  W - Wold;
+%             mom2 =  W2-W2old;
+%             
+%         end % Fin for
+%         
+        % Batch implementation
         
+            
+        % Precomputations
         for i=index_list
-            
-            % Precomputations
             [~,a1,a2]=NNforward(Xt(:,i),W,W2);
-            err = a2-yt(i);
-            err_mean = err_mean + err^2;
-            
-            % Gradient computations
-            g2 = err*[a1;1]';
-            g  = (W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err;
-            
-            % Gradient steps
-            W = W - mu*g;
-            W2 = W2 - mu*g2;
-            
-            
-        end % Fin for
+            a1_vec(:,i) = a1;
+            err(i) = a2-yt(i);
+        end    
+        err_mean = mean(err.^2);
+        a1_vec_ones = [a1_vec;ones(1,length(index_list))];
         
-        err_mean = err_mean / size(Xt,2);
+        % Gradient computations
+        g2 = sum(err)*sum(a1_vec_ones,2)';
+        g  = (repmat(W2(1:M)',1,length(index_list)).*a1_vec.*(1-a1_vec))...
+           *diag(err)*Xt';    
+        g  = (repmat(Y2(1:M)',1,length(index_list)).*a1_vec.*(1-a1_vec))...
+            *diag(err)*Xt';    
+    
+        % Storing olds
+        Wold = W;
+        W2old = W2;
+            
+        % Gradient step
+        W = Y1 - mu*g;
+        W2 = Y2 - mu*g2; 
+        
+        % Black magic (q=0)
+        alpha_old = alpha;
+        alpha = 1/2*(-alpha_old^2 + sqrt(alpha_old^4 + 4*alpha_old^2));
+        beta = alpha_old*(1-alpha_old)/(alpha_old^2 + alpha);
+        
+        % Auxiliary variables update
+        Y1 = W + beta * (W - Wold);
+        Y2 = W2 + beta * (W2 - W2old);
         
         %if abs(err_mean-e) < 0.05*abs(err_mean-e)
         number = number +1; % increment iteration
