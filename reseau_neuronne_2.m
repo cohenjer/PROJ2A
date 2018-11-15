@@ -6,7 +6,7 @@ clc
 
 %liste des omegas
 Nomega = 5;
-W_o = linspace(0,10,Nomega);
+W_o = linspace(0,2,Nomega);
 err_omega = zeros(1,Nomega);
 
 %pour chaque omega on va calculer l'erreur
@@ -16,7 +16,7 @@ for j=1:Nomega
 Nb = 20;
 
 %xi = rand(1,Nb);
-xi = linspace(0,1,Nb);
+xi = linspace(-1,1,Nb);
 
 % Train data
 Xt = xi;
@@ -24,7 +24,9 @@ Xt = [Xt;ones(1,Nb)];
 
 % Fonction que l'on veut interpoler
 %yi = xi.^2 + cos(2*pi*W_o(j)*xi);.1106
-yi = sin(2*pi*W_o(j)*xi);
+%yi = sin(2*pi*W_o(j)*xi);
+%yi = randn(1,Nb);
+yi = atan(W_o(j)*xi);
 yt = yi;
 
 %Rq: theoreme de Shannon respecte si omega<10.
@@ -33,7 +35,7 @@ yt = yi;
 
 
 err_mean = 1 ;
-N2 = 5 ;
+N2 = 2 ;
 e = 0 ;
 
 % Nombre max d'iteration
@@ -44,9 +46,9 @@ itermax = 10000 ;
 for u=1:N2
     
 % initialisation    
-dims = 200 ;
+dims = 1000 ;
 W = randn(dims,2) ;
-W2 = randn(1,dims+1) ;
+W2 = 1/sqrt(dims)*randn(1,dims+1) ;
 %W2 = randn(1,dims);
 
 % Pas du gradient
@@ -64,8 +66,8 @@ number = 0 ;
 err_mean = 1 ;
 N2 = 2 ;
 number = 0 ;
-e = 0 
-eps = 1e-8 ;
+e = 0 ;
+eps = 1e-5 ;
 
 m_t =  zeros(M , N) ;
 v_t =  zeros(M , N) ;
@@ -86,13 +88,14 @@ v_t_2 = zeros(M_W2 , N_W2) ;
         for i=index_list
             
             % Precomputations
-            [~,a1,a2]=NNforward(Xt(:,i),W,W2) ;
+            [N1,a1,a2]=NNforward(Xt(:,i),W,W2) ;
             err = a2-yt(i ) ;
             err_mean = err_mean + err^2 ;
             
             % Gradient computations
             g2 = err*[a1;1]' ;
-            g  = (W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err ;
+            %g  = (W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err ;
+            g  = (W2(1:M)'.*(N1>0))*Xt(:,i)'*err ; % RELU
             
             % Update biases
             m_t_2 = beta_1 * m_t_2 + (1 - beta_1) .* g2 ;
@@ -126,11 +129,11 @@ v_t_2 = zeros(M_W2 , N_W2) ;
 %% Post-processing
 
 % % Sorties yt_est sur les données train
-% for w=1:length(Xt)
-%     [~,~,out] =NNforward(Xt(:,w),W,W2);
-%     yt_est(1,w)= out;
-% end
-% 
+for w=1:length(Xt)
+    [~,~,out] =NNforward(Xt(:,w),W,W2);
+    yt_est(1,w)= out;
+end
+
 % 
 % % Tracés
 %     % 1/ Performances sur données train (normalement très bon)
@@ -148,9 +151,10 @@ v_t_2 = zeros(M_W2 , N_W2) ;
 
     % 3/ Sur une grille fine (test)
     N_grille = 1000;
-    grille = linspace(0,1,N_grille);
+    grille = linspace(-1,1,N_grille);
     %fun_real = grille.^2 + cos(2*pi*W_o(j)*grille);       
-    fun_real = sin(2*pi*W_o(j)*grille);       
+    %fun_real = sin(2*pi*W_o(j)*grille);       
+    fun_real = atan(W_o(j)*grille);
     for l=1:1000
        [~,~, outnn] = NNforward([grille(l);1],W,W2);
        fun_est(l) = outnn;
@@ -159,11 +163,20 @@ v_t_2 = zeros(M_W2 , N_W2) ;
     err_plot(u) = mean(err_2);
 end
 
-%on stocke l'erreur pour un omega donn�
+%on stocke l'erreur pour un omega donné
 std_omega(j) = std(err_plot);
 err_omega(j) = mean(err_plot);
 
 end
+
+% Last Fitting
+ figure
+plot(xi,yi,'+')
+hold on
+plot(xi,yt_est,'*')
+plot(grille,fun_est,'r')
+plot(grille,fun_real,'b')
+plot(grille,interp1(xi,yi,grille),'k')
 
     %on verifie que la courbe err train est relativement plate (on doit
     %pouvoir avoir toujours proche de 0 erreur de reconstruction)
