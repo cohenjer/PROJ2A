@@ -6,7 +6,7 @@ clc
 
 %liste des omegas
 Nomega = 5;
-W_o = linspace(0,10,Nomega);
+W_o = linspace(0,1,Nomega);
 err_omega = zeros(1,Nomega);
 
 %pour chaque omega on va calculer l'erreur
@@ -57,21 +57,19 @@ beta_1 = 0.9 ;
 beta_2 = 0.999 ; 
 
 number = 0 ;
-
-[M , N] = size(W) ;
-[M_W2 , N_W2] = size(W2) ;
-
+[M,N] = size(W) ;
 err_mean = 1 ;
 N2 = 2 ;
 number = 0 ;
-e = 0 
-eps = 1e-8 ;
+e = 0 ;
+eps = 1e-4 ;
 
-m_t =  zeros(M , N) ;
-v_t =  zeros(M , N) ;
+[N_W , M_W] = size(W);
+[N_W2 , M_W2] = size(W2);
 
-m_t_2 = zeros(M_W2 , N_W2) ;
-v_t_2 = zeros(M_W2 , N_W2) ;
+m_t = zeros(N_W , M_W) ;
+v_t = zeros(N_W2 , M_W2) ;
+
 
     while (err_mean>eps) && (number<itermax)
 
@@ -95,14 +93,14 @@ v_t_2 = zeros(M_W2 , N_W2) ;
             g  = (W2(1:M)'.*a1.*(1-a1))*Xt(:,i)'*err ;
             
             % Update biases
-            m_t_2 = beta_1 * m_t_2 + (1 - beta_1) .* g2 ;
-            v_t_2 = beta_2 * v_t_2 + (1 - beta_2) .* g2 .* g2 ;
+            m_t_2 = beta_1 * m_t + (1 - beta_1) * g2 ;
+            v_t_2 = beta_2 * v_t + (1 - beta_2) * g2 * g2 ;
             
             m_hat_2 = m_t_2 / (1 - beta_1 ^ (number + 1)) ; 
             v_hat_2 = v_t_2 / (1 - beta_2 ^ (number + 1)) ;
             
-            m_t = beta_1 * m_t + (1 - beta_1) .* g ;
-            v_t = beta_2 * v_t + (1 - beta_2) .* g .* g ;
+            m_t = beta_1 * m_t + (1 - beta_1) * g ;
+            v_t = beta_2 * v_t + (1 - beta_2) * g * g ;
             
             m_hat = m_t / (1 - beta_1 ^ (number + 1)) ; 
             v_hat = v_t / (1 - beta_2 ^ (number + 1)) ;
